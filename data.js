@@ -6,7 +6,7 @@
 
 const siteData = {
   "siteName": "Linh Chi",
-  "tagline": "Sách hay, tài liệu và app hữu ích",
+  "tagline": "Sách, tài liệu, app",
   "categories": [
     {
       "id": "hoc-tap",
