@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Linh & Chi Bi · Kho kiến thức</title>
+  <meta name="description" content="Kho tàng kiến thức học tập và công việc của hai vợ chồng." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Quicksand:wght@400;500;600;700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐱</text></svg>" />
+</head>
+<body>
+  <!-- Cánh hoa anh đào rơi -->
+  <div class="petals" aria-hidden="true">
+    <span></span><span></span><span></span><span></span><span></span>
+    <span></span><span></span><span></span><span></span><span></span>
+  </div>
+
+  <div class="app">
+    <!-- ===== Sidebar trái (kiểu App Store) ===== -->
+    <aside class="sidebar">
+      <div class="brand">
+        <span class="brand-logo" id="brandLogo"></span>
+        <div class="brand-text">
+          <strong id="brandName">Linh Chi</strong>
+          <small id="brandTag">Kho kiến thức</small>
+        </div>
+      </div>
+
+      <div class="search">
+        <svg class="search-icon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="21" y2="21"/></svg>
+        <input id="searchInput" type="search" placeholder="Tìm sách, website..." autocomplete="off" />
+      </div>
+
+      <nav class="nav" id="nav">
+        <button class="nav-item active" data-cat="all">
+          <span class="nav-emoji" id="discoverIcon"></span> Khám phá
+        </button>
+        <!-- các category sẽ được thêm bằng JS -->
+      </nav>
+
+      <div class="sidebar-foot">
+        <div class="kitty-frame">
+          <img id="kittyImg" src="assets/anh_bi.jpg" alt="Bé mèo nhà mình" />
+        </div>
+        <p class="kitty-caption">Bé mèo nhà mình 🐾</p>
+      </div>
+    </aside>
+
+    <!-- ===== Nội dung chính ===== -->
+    <main class="content" id="content">
+      <!-- Hero -->
+      <header class="hero">
+        <div class="hero-text">
+          <p class="hero-eyebrow">KHO CỦA LINH CHI</p>
+          <h1 id="heroTitle">Kho kiến thức<br />của Linh Chi</h1>
+          <p class="hero-sub" id="heroSub">Sách hay, tài liệu và những trang web hữu ích — gom hết về một nơi gọn gàng.</p>
+        </div>
+        <div class="hero-art" id="heroArt" aria-hidden="true">
+          <div class="hero-hill"></div>
+        </div>
+      </header>
+
+      <!-- Các section nội dung sẽ được render bằng JS -->
+      <div id="sections"></div>
+
+      <footer class="footer">
+        <span>Made with 💚 for Linh &amp; Chi Bi</span>
+      </footer>
+    </main>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
