@@ -639,9 +639,9 @@ const admin = {
       const fd = new FormData(e.target);
       data.siteName = (fd.get("siteName") || "").trim();
       data.tagline = (fd.get("tagline") || "").trim();
-      $("#brandName").textContent = data.siteName || "Linh Chi";
+      $("#brandName").textContent = data.siteName || "Chỗ của Bi";
       $("#heroSub").textContent = data.tagline || "";
-      document.title = (data.siteName || "Linh Chi") + " · Kho kiến thức";
+      document.title = data.siteName || "Chỗ của Bi";
       this.markDirty();
       closeModal();
       toast("Đã cập nhật cài đặt");
@@ -894,9 +894,9 @@ const admin = {
 
 /* ---------- Khởi tạo ---------- */
 function init() {
-  $("#brandName").textContent = data.siteName || "Linh Chi";
+  $("#brandName").textContent = data.siteName || "Chỗ của Bi";
   if (data.tagline) $("#heroSub").textContent = data.tagline;
-  document.title = (data.siteName || "Linh Chi") + " · Kho kiến thức";
+  document.title = data.siteName || "Chỗ của Bi";
 
   const eyebrow = $(".hero-eyebrow");
   if (eyebrow) {

@@ -5,7 +5,7 @@
    ============================================================= */
 
 const siteData = {
-  "siteName": "Linh Chi",
+  "siteName": "Chỗ của Bi",
   "tagline": "Sách, tài liệu, app",
   "categories": [
     {
