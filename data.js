@@ -6,7 +6,7 @@
 
 const siteData = {
   "siteName": "Chỗ của Bi",
-  "tagline": "Sách, tài liệu, app",
+  "tagline": "học và làm việc để mua pate cho Bi",
   "categories": [
     {
       "id": "hoc-tap",
