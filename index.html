@@ -46,6 +46,9 @@
           <img id="kittyImg" src="assets/anh_bi.jpg" alt="Bé Bi" />
         </div>
         <p class="kitty-caption">Bé Bi</p>
+        <button id="adminBtn" class="admin-btn" type="button" hidden>
+          <span class="lock">🔒</span> <span class="admin-btn-label">Admin</span>
+        </button>
       </div>
     </aside>
 
@@ -67,11 +70,40 @@
       <div id="sections"></div>
 
       <footer class="footer">
-        <span>Made with 💚 for Linh &amp; Chi Bi</span>
+        <span>From Linh to &amp; Chi Bi</span>
       </footer>
     </main>
   </div>
 
+  <!-- Banner khi đang ở chế độ admin -->
+  <div id="adminBanner" class="admin-banner" hidden>
+    <div class="admin-banner-inner">
+      <span class="ab-tag">🌸 Admin</span>
+      <span class="ab-msg" id="adminBannerMsg">Đang chỉnh sửa nội dung</span>
+      <div class="ab-actions">
+        <button type="button" id="adminAddCategory" class="ab-btn">+ Mục lớn</button>
+        <button type="button" id="adminSettings" class="ab-btn">⚙ Cài đặt</button>
+        <button type="button" id="adminDiscard" class="ab-btn ab-btn-ghost" hidden>Huỷ thay đổi</button>
+        <button type="button" id="adminPublish" class="ab-btn ab-btn-primary" disabled>💾 Lưu &amp; Publish</button>
+        <button type="button" id="adminLogout" class="ab-btn ab-btn-ghost">Thoát</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal chung -->
+  <div id="modal" class="modal" hidden>
+    <div class="modal-backdrop" data-close></div>
+    <div class="modal-card" role="dialog" aria-modal="true">
+      <button type="button" class="modal-x" data-close aria-label="Đóng">×</button>
+      <div id="modalBody"></div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast" class="toast" hidden></div>
+
+  <!-- config.js chứa URL Worker (commit lên GitHub, KHÔNG chứa secret). -->
+  <script src="config.js"></script>
   <script src="data.js"></script>
   <script src="app.js"></script>
 </body>

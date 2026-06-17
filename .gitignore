@@ -1,0 +1,6 @@
+.DS_Store
+.idea/
+.vscode/
+
+# Tài liệu setup chứa username/password/PAT mẫu — không push
+SETUP.md

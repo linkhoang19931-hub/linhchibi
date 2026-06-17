@@ -1,5 +1,5 @@
 /* ============================================================
-   LINH CHI  —  Logic hiển thị (không cần chỉnh file này)
+   LINH CHI  —  Logic hiển thị + module admin
    ============================================================ */
 
 /* ---------- BỘ ICON minh hoạ dễ thương (SVG vector) ----------
@@ -103,6 +103,8 @@ const ICONS = {
     <path d="M13 33 Q7 33 7 27.5 Q7 22 13 22 Q14 14 23 15 Q31 15 31 23 Q39 22.5 39 29 Q39 33 33 33 Z" fill="#ffffff" stroke="#e0c9d0" stroke-width="1.6"/>`,
 };
 
+const ICON_NAMES = Object.keys(ICONS);
+
 function svgIcon(name, size) {
   const inner = ICONS[name] || ICONS.book;
   return `<svg class="ic" viewBox="0 0 48 48" width="${size}" height="${size}" fill="none" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">${inner}</svg>`;
@@ -120,34 +122,58 @@ function hash(text = "") {
   return h;
 }
 
-// Bảng màu nền dịu kiểu kawaii (chọn ổn định theo tên)
 const PALETTES = [
-  ["#ffe0e8", "#ffc9d6"], // sakura
-  ["#fff0dd", "#ffe0bf"], // kem cam
-  ["#e7f4e6", "#cfe9cf"], // matcha
-  ["#e6f1fb", "#cfe2f5"], // sky
-  ["#f3eafc", "#e2d3f3"], // lavender
-  ["#fdeede", "#f8dcc6"], // peach
-  ["#fdeaf0", "#f8d3e0"], // hồng nhạt
-  ["#e9f6f3", "#d2ece6"], // mint
+  ["#ffe0e8", "#ffc9d6"], ["#fff0dd", "#ffe0bf"], ["#e7f4e6", "#cfe9cf"],
+  ["#e6f1fb", "#cfe2f5"], ["#f3eafc", "#e2d3f3"], ["#fdeede", "#f8dcc6"],
+  ["#fdeaf0", "#f8d3e0"], ["#e9f6f3", "#d2ece6"],
 ];
-function paletteFor(text) {
-  return PALETTES[hash(text) % PALETTES.length];
-}
+function paletteFor(text) { return PALETTES[hash(text) % PALETTES.length]; }
 
 const $ = (sel, el = document) => el.querySelector(sel);
 const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
+function slugify(s) {
+  return String(s || "")
+    .normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/đ/gi, "d")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+function uniqueId(base, taken) {
+  let id = base || "x";
+  if (!taken.has(id)) return id;
+  for (let i = 2; ; i++) {
+    const cand = `${id}-${i}`;
+    if (!taken.has(cand)) return cand;
+  }
+}
+function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
 const state = { active: "all", query: "" };
 
+// `savedData` = bản đã publish (snapshot từ siteData hoặc từ lần publish gần nhất).
+// `data` = bản đang hiển thị; ở chế độ admin, có thể là bản nháp (đã sửa).
+let savedData = deepClone(siteData);
+let data = deepClone(savedData);
+
 /* ---------- Render 1 mục (cell kiểu App Store) ---------- */
-function renderCell(item) {
+function renderCell(item, path) {
   const [c1, c2] = paletteFor(item.title);
   const isWeb = item.type === "website";
   const iconStyle = item.cover
     ? `background-image:url('${esc(item.cover)}');background-size:cover;background-position:center`
     : `background:linear-gradient(150deg, ${c1}, ${c2})`;
   const iconInner = item.cover ? "" : svgIcon(item.icon || (isWeb ? "globe" : "book"), 38);
+
+  const adminCtrls = admin.authed ? `
+    <span class="cell-edit">
+      <button type="button" class="ce-btn" data-admin="edit-item" data-path="${esc(path)}" title="Sửa">✎</button>
+      <button type="button" class="ce-btn ce-up" data-admin="move-item" data-path="${esc(path)}" data-dir="-1" title="Lên">↑</button>
+      <button type="button" class="ce-btn ce-down" data-admin="move-item" data-path="${esc(path)}" data-dir="1" title="Xuống">↓</button>
+      <button type="button" class="ce-btn ce-del" data-admin="del-item" data-path="${esc(path)}" title="Xoá">🗑</button>
+    </span>` : "";
+
   return `
     <a class="cell" href="${esc(item.url)}" target="_blank" rel="noopener">
       <span class="cell-icon" style="${iconStyle}">${iconInner}</span>
@@ -157,6 +183,7 @@ function renderCell(item) {
         ${item.tag ? `<span class="cell-tag">${esc(item.tag)}</span>` : ""}
       </span>
       <span class="get-btn">Mở</span>
+      ${adminCtrls}
     </a>`;
 }
 
@@ -169,11 +196,11 @@ function matchQuery(item, q) {
   );
 }
 
-/* ---------- Render toàn bộ (kiểu kệ section App Store) ---------- */
+/* ---------- Render toàn bộ ---------- */
 function render() {
   const q = state.query.trim().toLowerCase();
   const searching = q.length > 0;
-  const cats = siteData.categories.filter(
+  const cats = data.categories.filter(
     (c) => state.active === "all" || c.id === state.active
   );
 
@@ -182,14 +209,21 @@ function render() {
 
   for (const cat of cats) {
     for (const topic of cat.topics || []) {
-      const items = (topic.items || []).filter((it) => matchQuery(it, q));
+      const allItems = topic.items || [];
+      const items = allItems.filter((it) => matchQuery(it, q));
       total += items.length;
 
-      // Khi đang tìm kiếm, bỏ qua chủ đề không có kết quả
       if (searching && !items.length) continue;
 
+      const adminTopicCtrls = admin.authed ? `
+        <span class="shelf-edit">
+          <button type="button" class="ce-btn" data-admin="add-item" data-path="${esc(cat.id)}/${esc(topic.id)}" title="Thêm mục">＋ Mục</button>
+          <button type="button" class="ce-btn" data-admin="edit-topic" data-path="${esc(cat.id)}/${esc(topic.id)}" title="Sửa chủ đề">✎</button>
+          <button type="button" class="ce-btn ce-del" data-admin="del-topic" data-path="${esc(cat.id)}/${esc(topic.id)}" title="Xoá chủ đề">🗑</button>
+        </span>` : "";
+
       const body = items.length
-        ? `<div class="cells">${items.map(renderCell).join("")}</div>`
+        ? `<div class="cells">${items.map((it, i) => renderCell(it, `${cat.id}/${topic.id}/${allItems.indexOf(it)}`)).join("")}</div>`
         : `<div class="placeholder">${svgIcon("sakura", 28)} Sắp cập nhật nhé!</div>`;
 
       html += `
@@ -201,10 +235,25 @@ function render() {
               ${topic.description ? `<p class="shelf-desc">${esc(topic.description)}</p>` : ""}
             </div>
             ${items.length ? `<span class="shelf-count">${items.length} mục</span>` : ""}
+            ${adminTopicCtrls}
           </div>
           ${body}
         </section>`;
     }
+
+    if (admin.authed && (state.active === cat.id || cats.length === 1)) {
+      html += `
+        <div class="shelf-add">
+          <button type="button" class="ce-btn ce-add" data-admin="add-topic" data-path="${esc(cat.id)}">＋ Chủ đề mới trong "${esc(cat.name)}"</button>
+        </div>`;
+    }
+  }
+
+  if (admin.authed && state.active === "all" && !searching) {
+    html += `
+      <div class="shelf-add">
+        <button type="button" class="ce-btn ce-add" data-admin="add-category">＋ Mục lớn mới</button>
+      </div>`;
   }
 
   if (searching && !total) {
@@ -215,13 +264,25 @@ function render() {
 }
 
 /* ---------- Sidebar nav ---------- */
+let navListenerAttached = false;
 function buildNav() {
   const nav = $("#nav");
-  for (const cat of siteData.categories) {
+  // Giữ nguyên nút "Khám phá" đầu tiên, xoá phần còn lại
+  nav.innerHTML = `
+    <button class="nav-item ${state.active === "all" ? "active" : ""}" data-cat="all">
+      <span class="nav-emoji" id="discoverIcon">${svgIcon("sparkles", 24)}</span> Khám phá
+    </button>`;
+
+  for (const cat of data.categories) {
     const btn = document.createElement("button");
-    btn.className = "nav-item";
+    btn.className = "nav-item" + (state.active === cat.id ? " active" : "");
     btn.dataset.cat = cat.id;
-    btn.innerHTML = `<span class="nav-emoji">${svgIcon(cat.icon || "book", 24)}</span> ${esc(cat.name)}`;
+    const adminPart = admin.authed
+      ? `<span class="nav-admin">
+           <span class="ce-btn ce-mini" data-admin="edit-category" data-path="${esc(cat.id)}" title="Sửa">✎</span>
+           <span class="ce-btn ce-mini ce-del" data-admin="del-category" data-path="${esc(cat.id)}" title="Xoá">🗑</span>
+         </span>` : "";
+    btn.innerHTML = `<span class="nav-emoji">${svgIcon(cat.icon || "book", 24)}</span> <span class="nav-label">${esc(cat.name)}</span>${adminPart}`;
     nav.appendChild(btn);
 
     for (const topic of cat.topics || []) {
@@ -234,7 +295,15 @@ function buildNav() {
     }
   }
 
+  if (navListenerAttached) return;
+  navListenerAttached = true;
+
   nav.addEventListener("click", (e) => {
+    // Click vào icon admin → đừng switch tab
+    if (e.target.closest("[data-admin]")) {
+      e.stopPropagation();
+      return;
+    }
     const btn = e.target.closest(".nav-item");
     if (!btn) return;
     state.active = btn.dataset.cat;
@@ -255,13 +324,580 @@ function buildNav() {
   });
 }
 
+/* ============================================================
+   ADMIN MODULE
+   ============================================================ */
+
+const DRAFT_KEY = "linhchi-draft-v1";
+const SESSION_KEY = "linhchi-admin-session-v2";
+
+function toast(msg, isErr = false) {
+  const el = $("#toast");
+  el.textContent = msg;
+  el.classList.toggle("toast-err", isErr);
+  el.hidden = false;
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { el.hidden = true; }, 3500);
+}
+
+function openModal(html) {
+  $("#modalBody").innerHTML = html;
+  $("#modal").hidden = false;
+  document.body.style.overflow = "hidden";
+  const first = $("#modalBody input, #modalBody textarea, #modalBody select");
+  if (first) first.focus();
+}
+function closeModal() {
+  $("#modal").hidden = true;
+  $("#modalBody").innerHTML = "";
+  document.body.style.overflow = "";
+}
+
+function iconSelectHTML(name = "selected", current = "book") {
+  return `
+    <div class="icon-grid">
+      ${ICON_NAMES.map(n => `
+        <label class="icon-opt ${n === current ? "is-on" : ""}">
+          <input type="radio" name="${name}" value="${n}" ${n === current ? "checked" : ""} hidden />
+          <span class="icon-opt-svg">${svgIcon(n, 28)}</span>
+          <span class="icon-opt-label">${n}</span>
+        </label>`).join("")}
+    </div>`;
+}
+function bindIconGrid(scope) {
+  scope.querySelectorAll(".icon-grid").forEach(grid => {
+    grid.addEventListener("click", (e) => {
+      const opt = e.target.closest(".icon-opt");
+      if (!opt) return;
+      grid.querySelectorAll(".icon-opt").forEach(o => o.classList.remove("is-on"));
+      opt.classList.add("is-on");
+      const input = opt.querySelector("input");
+      if (input) input.checked = true;
+    });
+  });
+}
+
+const admin = {
+  enabled: false,
+  authed: false,
+  dirty: false,
+  config: null,
+  token: null,
+  tokenExp: 0,
+
+  init() {
+    this.config = window.LINHCHI_CONFIG || {};
+    this.enabled = !!this.config.WORKER_URL;
+    if (!this.enabled) return;
+
+    const btn = $("#adminBtn");
+    btn.hidden = false;
+    btn.addEventListener("click", () => this.showLogin());
+
+    // Khôi phục session từ sessionStorage (token + thời điểm hết hạn)
+    try {
+      const raw = sessionStorage.getItem(SESSION_KEY);
+      if (raw) {
+        const s = JSON.parse(raw);
+        if (s.token && s.exp && s.exp > Math.floor(Date.now() / 1000)) {
+          this.token = s.token;
+          this.tokenExp = s.exp;
+          this.authed = true;
+        } else {
+          sessionStorage.removeItem(SESSION_KEY);
+        }
+      }
+    } catch {
+      sessionStorage.removeItem(SESSION_KEY);
+    }
+
+    this.bindGlobal();
+    this.bindBanner();
+
+    if (this.authed) this.enter(/*silent*/ true);
+  },
+
+  workerURL(path) {
+    return (this.config.WORKER_URL || "").replace(/\/+$/, "") + path;
+  },
+
+  bindGlobal() {
+    // Click delegation cho mọi nút admin
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("[data-admin]");
+      if (!t || !this.authed) return;
+      e.preventDefault();
+      const op = t.dataset.admin;
+      const path = t.dataset.path;
+      const dir = t.dataset.dir;
+      if (op === "add-category") this.editCategory(null);
+      else if (op === "edit-category") this.editCategory(path);
+      else if (op === "del-category") this.delCategory(path);
+      else if (op === "add-topic") this.editTopic(path, null);
+      else if (op === "edit-topic") this.editTopic(...path.split("/"));
+      else if (op === "del-topic") this.delTopic(path);
+      else if (op === "add-item") this.editItem(path, null);
+      else if (op === "edit-item") this.editItem(path);
+      else if (op === "del-item") this.delItem(path);
+      else if (op === "move-item") this.moveItem(path, parseInt(dir, 10));
+    });
+
+    // Modal close
+    $("#modal").addEventListener("click", (e) => {
+      if (e.target.matches("[data-close]")) closeModal();
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && !$("#modal").hidden) closeModal();
+    });
+  },
+
+  bindBanner() {
+    $("#adminAddCategory").addEventListener("click", () => this.editCategory(null));
+    $("#adminSettings").addEventListener("click", () => this.editSettings());
+    $("#adminDiscard").addEventListener("click", () => this.discard());
+    $("#adminPublish").addEventListener("click", () => this.publish());
+    $("#adminLogout").addEventListener("click", () => this.logout());
+  },
+
+  showLogin() {
+    if (this.authed) return;
+    openModal(`
+      <h2 class="modal-title">🌸 Đăng nhập Admin</h2>
+      <p class="modal-sub">Xác thực qua Cloudflare Worker.</p>
+      <form id="loginForm" class="form" autocomplete="off">
+        <label>Tên đăng nhập
+          <input name="username" autofocus required autocomplete="username" />
+        </label>
+        <label>Mật khẩu
+          <input name="password" type="password" required autocomplete="current-password" />
+        </label>
+        <div id="loginErr" class="form-err" hidden></div>
+        <div class="form-actions">
+          <button type="button" class="ab-btn ab-btn-ghost" data-close>Huỷ</button>
+          <button type="submit" class="ab-btn ab-btn-primary" id="loginSubmit">Đăng nhập</button>
+        </div>
+      </form>
+    `);
+    const form = $("#loginForm");
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const submit = $("#loginSubmit");
+      const err = $("#loginErr");
+      err.hidden = true;
+      submit.disabled = true;
+      submit.textContent = "Đang đăng nhập...";
+      try {
+        const fd = new FormData(form);
+        const res = await fetch(this.workerURL("/api/login"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: fd.get("username"),
+            password: fd.get("password"),
+          }),
+        });
+        let j;
+        try { j = await res.json(); } catch { j = null; }
+        if (!res.ok || !j || !j.ok) {
+          throw new Error(j?.error || `HTTP ${res.status}`);
+        }
+        this.token = j.token;
+        this.tokenExp = j.exp;
+        sessionStorage.setItem(SESSION_KEY, JSON.stringify({ token: j.token, exp: j.exp }));
+        this.authed = true;
+        closeModal();
+        this.enter();
+      } catch (ex) {
+        err.textContent = ex.message || "Đăng nhập thất bại";
+        err.hidden = false;
+      } finally {
+        submit.disabled = false;
+        submit.textContent = "Đăng nhập";
+      }
+    });
+  },
+
+  enter(silent = false) {
+    document.body.classList.add("admin-mode");
+    $("#adminBanner").hidden = false;
+    $("#adminBtn").hidden = true;
+
+    const draft = localStorage.getItem(DRAFT_KEY);
+    if (draft) {
+      try {
+        data = JSON.parse(draft);
+        this.dirty = true;
+        $("#adminDiscard").hidden = false;
+        $("#adminPublish").disabled = false;
+      } catch {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    }
+
+    buildNav();
+    render();
+    if (!silent) toast("Đăng nhập thành công 🌸");
+  },
+
+  logout() {
+    sessionStorage.removeItem(SESSION_KEY);
+    this.authed = false;
+    this.token = null;
+    this.tokenExp = 0;
+    document.body.classList.remove("admin-mode");
+    $("#adminBanner").hidden = true;
+    $("#adminBtn").hidden = false;
+    buildNav();
+    render();
+  },
+
+  markDirty() {
+    this.dirty = true;
+    try { localStorage.setItem(DRAFT_KEY, JSON.stringify(data)); }
+    catch (e) { toast("Không lưu được nháp: " + e.message, true); }
+    $("#adminDiscard").hidden = false;
+    $("#adminPublish").disabled = false;
+    buildNav();
+    render();
+  },
+
+  discard() {
+    if (!confirm("Bỏ tất cả thay đổi chưa publish?")) return;
+    localStorage.removeItem(DRAFT_KEY);
+    data = deepClone(savedData);
+    this.dirty = false;
+    $("#adminDiscard").hidden = true;
+    $("#adminPublish").disabled = true;
+    buildNav();
+    render();
+    toast("Đã huỷ thay đổi");
+  },
+
+  async publish() {
+    const btn = $("#adminPublish");
+    const oldLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "⏳ Đang publish...";
+    try {
+      const res = await fetch(this.workerURL("/api/save"), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${this.token || ""}`,
+        },
+        body: JSON.stringify({
+          data,
+          message: "Update content via admin UI",
+        }),
+      });
+      let j;
+      try { j = await res.json(); } catch { j = { ok: false, error: `HTTP ${res.status}` }; }
+      if (res.status === 401) {
+        this.logout();
+        throw new Error("Phiên hết hạn — đã đăng xuất, hãy login lại.");
+      }
+      if (!res.ok || !j.ok) throw new Error(j.error || `HTTP ${res.status}`);
+      localStorage.removeItem(DRAFT_KEY);
+      this.dirty = false;
+      savedData = deepClone(data);
+      $("#adminDiscard").hidden = true;
+      btn.textContent = oldLabel;
+      toast(j.message || "Đã publish lên GitHub");
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = oldLabel;
+      toast("Lỗi publish: " + err.message, true);
+    }
+  },
+
+  // ===== Helpers find by path =====
+  findCat(catId) { return data.categories.find(c => c.id === catId); },
+  findTopic(catId, topicId) {
+    const c = this.findCat(catId);
+    return c && (c.topics || []).find(t => t.id === topicId);
+  },
+
+  // ===== Settings =====
+  editSettings() {
+    openModal(`
+      <h2 class="modal-title">⚙ Cài đặt site</h2>
+      <form id="settingsForm" class="form">
+        <label>Tên site
+          <input name="siteName" value="${esc(data.siteName || "")}" required />
+        </label>
+        <label>Tagline (hiện ở hero)
+          <input name="tagline" value="${esc(data.tagline || "")}" />
+        </label>
+        <div class="form-actions">
+          <button type="button" class="ab-btn ab-btn-ghost" data-close>Huỷ</button>
+          <button type="submit" class="ab-btn ab-btn-primary">Lưu</button>
+        </div>
+      </form>
+    `);
+    $("#settingsForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      data.siteName = (fd.get("siteName") || "").trim();
+      data.tagline = (fd.get("tagline") || "").trim();
+      $("#brandName").textContent = data.siteName || "Linh Chi";
+      $("#heroSub").textContent = data.tagline || "";
+      document.title = (data.siteName || "Linh Chi") + " · Kho kiến thức";
+      this.markDirty();
+      closeModal();
+      toast("Đã cập nhật cài đặt");
+    });
+  },
+
+  // ===== Category =====
+  editCategory(catId) {
+    const isNew = !catId;
+    const cat = isNew
+      ? { id: "", name: "", icon: "sakura", description: "", topics: [] }
+      : this.findCat(catId);
+    if (!cat) return;
+
+    openModal(`
+      <h2 class="modal-title">${isNew ? "Thêm mục lớn" : "Sửa mục lớn"}</h2>
+      <form id="catForm" class="form">
+        <label>Tên
+          <input name="name" value="${esc(cat.name)}" required autofocus />
+        </label>
+        <label>Mô tả (ngắn)
+          <input name="description" value="${esc(cat.description || "")}" />
+        </label>
+        <fieldset>
+          <legend>Icon</legend>
+          ${iconSelectHTML("icon", cat.icon || "sakura")}
+        </fieldset>
+        <div class="form-actions">
+          <button type="button" class="ab-btn ab-btn-ghost" data-close>Huỷ</button>
+          <button type="submit" class="ab-btn ab-btn-primary">${isNew ? "Thêm" : "Lưu"}</button>
+        </div>
+      </form>
+    `);
+    bindIconGrid($("#catForm"));
+    $("#catForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const name = (fd.get("name") || "").trim();
+      if (!name) return;
+      const update = {
+        name,
+        description: (fd.get("description") || "").trim(),
+        icon: fd.get("icon") || "sakura",
+      };
+      if (isNew) {
+        const taken = new Set(data.categories.map(c => c.id));
+        const id = uniqueId(slugify(name), taken);
+        data.categories.push({ id, ...update, topics: [] });
+      } else {
+        Object.assign(cat, update);
+      }
+      this.markDirty();
+      closeModal();
+      toast(isNew ? "Đã thêm mục lớn" : "Đã cập nhật mục lớn");
+    });
+  },
+
+  delCategory(catId) {
+    const cat = this.findCat(catId);
+    if (!cat) return;
+    const n = (cat.topics || []).reduce((s, t) => s + (t.items || []).length, 0);
+    if (!confirm(`Xoá mục lớn "${cat.name}" cùng ${cat.topics.length} chủ đề và ${n} mục con?`)) return;
+    data.categories = data.categories.filter(c => c.id !== catId);
+    if (state.active === catId) state.active = "all";
+    this.markDirty();
+    toast("Đã xoá mục lớn");
+  },
+
+  // ===== Topic =====
+  editTopic(catId, topicId) {
+    const isNew = !topicId;
+    const cat = this.findCat(catId);
+    if (!cat) return;
+    const topic = isNew
+      ? { id: "", name: "", icon: "sakura", description: "", items: [] }
+      : this.findTopic(catId, topicId);
+    if (!topic) return;
+
+    openModal(`
+      <h2 class="modal-title">${isNew ? "Thêm chủ đề" : "Sửa chủ đề"}</h2>
+      <p class="modal-sub">Trong mục: <strong>${esc(cat.name)}</strong></p>
+      <form id="topicForm" class="form">
+        <label>Tên
+          <input name="name" value="${esc(topic.name)}" required autofocus />
+        </label>
+        <label>Mô tả
+          <input name="description" value="${esc(topic.description || "")}" />
+        </label>
+        <fieldset>
+          <legend>Icon</legend>
+          ${iconSelectHTML("icon", topic.icon || "sakura")}
+        </fieldset>
+        <div class="form-actions">
+          <button type="button" class="ab-btn ab-btn-ghost" data-close>Huỷ</button>
+          <button type="submit" class="ab-btn ab-btn-primary">${isNew ? "Thêm" : "Lưu"}</button>
+        </div>
+      </form>
+    `);
+    bindIconGrid($("#topicForm"));
+    $("#topicForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const name = (fd.get("name") || "").trim();
+      if (!name) return;
+      const update = {
+        name,
+        description: (fd.get("description") || "").trim(),
+        icon: fd.get("icon") || "sakura",
+      };
+      if (isNew) {
+        const taken = new Set((cat.topics || []).map(t => t.id));
+        const id = uniqueId(slugify(name), taken);
+        cat.topics = cat.topics || [];
+        cat.topics.push({ id, ...update, items: [] });
+      } else {
+        Object.assign(topic, update);
+      }
+      this.markDirty();
+      closeModal();
+      toast(isNew ? "Đã thêm chủ đề" : "Đã cập nhật chủ đề");
+    });
+  },
+
+  delTopic(path) {
+    const [catId, topicId] = path.split("/");
+    const cat = this.findCat(catId);
+    const topic = this.findTopic(catId, topicId);
+    if (!cat || !topic) return;
+    const n = (topic.items || []).length;
+    if (!confirm(`Xoá chủ đề "${topic.name}" cùng ${n} mục?`)) return;
+    cat.topics = cat.topics.filter(t => t.id !== topicId);
+    this.markDirty();
+    toast("Đã xoá chủ đề");
+  },
+
+  // ===== Item =====
+  editItem(path, sentinel) {
+    // path = "catId/topicId" (sentinel === null → thêm mới)
+    // path = "catId/topicId/index" → sửa
+    const parts = path.split("/");
+    const isNew = sentinel === null || parts.length === 2;
+    const [catId, topicId, idxStr] = parts;
+    const topic = this.findTopic(catId, topicId);
+    if (!topic) return;
+    const idx = isNew ? -1 : parseInt(idxStr, 10);
+    const item = isNew
+      ? { title: "", type: "book", url: "", desc: "", tag: "", icon: "book", cover: "" }
+      : topic.items[idx];
+    if (!item) return;
+
+    openModal(`
+      <h2 class="modal-title">${isNew ? "Thêm mục" : "Sửa mục"}</h2>
+      <p class="modal-sub">Trong chủ đề: <strong>${esc(topic.name)}</strong></p>
+      <form id="itemForm" class="form">
+        <label>Tên *
+          <input name="title" value="${esc(item.title)}" required autofocus />
+        </label>
+        <label>URL *
+          <input name="url" value="${esc(item.url)}" type="url" required placeholder="https://..." />
+        </label>
+        <label>Mô tả ngắn
+          <input name="desc" value="${esc(item.desc || "")}" />
+        </label>
+        <div class="form-row">
+          <fieldset class="form-half">
+            <legend>Loại</legend>
+            <label class="radio">
+              <input type="radio" name="type" value="book" ${item.type !== "website" ? "checked" : ""} />
+              <span>📖 Tài liệu / Sách</span>
+            </label>
+            <label class="radio">
+              <input type="radio" name="type" value="website" ${item.type === "website" ? "checked" : ""} />
+              <span>🌐 App / Website</span>
+            </label>
+          </fieldset>
+          <label class="form-half">Tag (nhãn nhỏ)
+            <input name="tag" value="${esc(item.tag || "")}" placeholder="PDF, App..." />
+          </label>
+        </div>
+        <label>Ảnh bìa (URL — để trống thì dùng icon + màu gradient)
+          <input name="cover" value="${esc(item.cover || "")}" type="url" placeholder="https://..." />
+        </label>
+        <fieldset>
+          <legend>Icon</legend>
+          ${iconSelectHTML("icon", item.icon || "book")}
+        </fieldset>
+        <div class="form-actions">
+          ${!isNew ? `<button type="button" class="ab-btn ab-btn-ghost ab-btn-danger" data-confirm-del>Xoá</button>` : ""}
+          <span class="form-spacer"></span>
+          <button type="button" class="ab-btn ab-btn-ghost" data-close>Huỷ</button>
+          <button type="submit" class="ab-btn ab-btn-primary">${isNew ? "Thêm" : "Lưu"}</button>
+        </div>
+      </form>
+    `);
+    bindIconGrid($("#itemForm"));
+    $("#itemForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const next = {
+        title: (fd.get("title") || "").trim(),
+        url: (fd.get("url") || "").trim(),
+        desc: (fd.get("desc") || "").trim(),
+        type: fd.get("type") || "book",
+        tag: (fd.get("tag") || "").trim(),
+        cover: (fd.get("cover") || "").trim(),
+        icon: fd.get("icon") || "book",
+      };
+      if (!next.title || !next.url) return;
+      if (isNew) {
+        topic.items = topic.items || [];
+        topic.items.push(next);
+      } else {
+        topic.items[idx] = next;
+      }
+      this.markDirty();
+      closeModal();
+      toast(isNew ? "Đã thêm mục" : "Đã cập nhật mục");
+    });
+    const delBtn = $("#itemForm [data-confirm-del]");
+    if (delBtn) delBtn.addEventListener("click", () => {
+      closeModal();
+      this.delItem(path);
+    });
+  },
+
+  delItem(path) {
+    const [catId, topicId, idxStr] = path.split("/");
+    const topic = this.findTopic(catId, topicId);
+    if (!topic) return;
+    const idx = parseInt(idxStr, 10);
+    const item = topic.items[idx];
+    if (!item) return;
+    if (!confirm(`Xoá mục "${item.title}"?`)) return;
+    topic.items.splice(idx, 1);
+    this.markDirty();
+    toast("Đã xoá mục");
+  },
+
+  moveItem(path, dir) {
+    const [catId, topicId, idxStr] = path.split("/");
+    const topic = this.findTopic(catId, topicId);
+    if (!topic) return;
+    const idx = parseInt(idxStr, 10);
+    const j = idx + dir;
+    if (j < 0 || j >= topic.items.length) return;
+    [topic.items[idx], topic.items[j]] = [topic.items[j], topic.items[idx]];
+    this.markDirty();
+  },
+};
+
 /* ---------- Khởi tạo ---------- */
 function init() {
-  $("#brandName").textContent = siteData.siteName || "Linh Chi";
-  if (siteData.tagline) $("#heroSub").textContent = siteData.tagline;
-  document.title = (siteData.siteName || "Linh Chi") + " · Kho kiến thức";
+  $("#brandName").textContent = data.siteName || "Linh Chi";
+  if (data.tagline) $("#heroSub").textContent = data.tagline;
+  document.title = (data.siteName || "Linh Chi") + " · Kho kiến thức";
 
-  // Dòng ngày kiểu tab "Today" của App Store
   const eyebrow = $(".hero-eyebrow");
   if (eyebrow) {
     const d = new Date();
@@ -273,7 +909,7 @@ function init() {
   $("#discoverIcon").innerHTML = svgIcon("sparkles", 24);
 
   const art = $("#heroArt");
-  if (art) {
+  if (art && !art.querySelector(".ha-sun")) {
     art.insertAdjacentHTML("beforeend", `
       <span class="ha-sun">${svgIcon("sun", 50)}</span>
       <span class="ha-cloud">${svgIcon("cloud", 52)}</span>
@@ -294,6 +930,8 @@ function init() {
       render();
     }, 120);
   });
+
+  admin.init();
 }
 
 document.addEventListener("DOMContentLoaded", init);
