@@ -140,43 +140,23 @@ const $$ = (sel, el = document) => [...el.querySelectorAll(sel)];
 
 const state = { active: "all", query: "" };
 
-/* ---------- Render thẻ (item) ---------- */
-function renderBook(item) {
+/* ---------- Render 1 mục (cell kiểu App Store) ---------- */
+function renderCell(item) {
   const [c1, c2] = paletteFor(item.title);
-  const tag = item.tag ? `<span class="tag">${esc(item.tag)}</span>` : "";
-  const face = item.cover
-    ? `<img class="cover-img" src="${esc(item.cover)}" alt="" loading="lazy"/>`
-    : `<span class="be">${svgIcon(item.icon || "book", 78)}</span>`;
+  const isWeb = item.type === "website";
+  const iconStyle = item.cover
+    ? `background-image:url('${esc(item.cover)}');background-size:cover;background-position:center`
+    : `background:linear-gradient(150deg, ${c1}, ${c2})`;
+  const iconInner = item.cover ? "" : svgIcon(item.icon || (isWeb ? "globe" : "book"), 38);
   return `
-    <a class="card book" href="${esc(item.url)}" target="_blank" rel="noopener">
-      <div class="book-cover" style="background:linear-gradient(155deg, ${c1}, ${c2})">
-        ${tag}
-        ${face}
-        <span class="cover-title">${esc(item.title)}</span>
-      </div>
-      <div class="card-body">
-        ${item.desc ? `<div class="card-desc">${esc(item.desc)}</div>` : ""}
-        <span class="card-link">Mở liên kết<span class="arrow">→</span></span>
-      </div>
-    </a>`;
-}
-
-function renderWebsite(item) {
-  const [c1, c2] = paletteFor(item.title);
-  const tag = item.tag ? `<span class="tag">${esc(item.tag)}</span>` : "";
-  let host = "";
-  try { host = new URL(item.url).hostname.replace(/^www\./, ""); } catch (e) { host = item.url; }
-  return `
-    <a class="card web" href="${esc(item.url)}" target="_blank" rel="noopener">
-      <div class="web-top" style="background:linear-gradient(135deg, ${c1}, ${c2})">
-        ${tag}
-        <span class="web-icon">${svgIcon(item.icon || "globe", 42)}</span>
-        <span class="web-name">${esc(item.title)}</span>
-      </div>
-      <div class="card-body">
-        ${item.desc ? `<div class="card-desc">${esc(item.desc)}</div>` : ""}
-        <span class="card-link link-host"><span class="dot"></span>${esc(host)}</span>
-      </div>
+    <a class="cell" href="${esc(item.url)}" target="_blank" rel="noopener">
+      <span class="cell-icon" style="${iconStyle}">${iconInner}</span>
+      <span class="cell-main">
+        <span class="cell-title">${esc(item.title)}</span>
+        ${item.desc ? `<span class="cell-sub">${esc(item.desc)}</span>` : ""}
+        ${item.tag ? `<span class="cell-tag">${esc(item.tag)}</span>` : ""}
+      </span>
+      <span class="get-btn">Mở</span>
     </a>`;
 }
 
@@ -189,18 +169,7 @@ function matchQuery(item, q) {
   );
 }
 
-// Một khung "type" (Tài liệu / App & Website) trong 1 chủ đề
-function renderTypeBlock(label, items, isWeb) {
-  if (!items.length) return "";
-  const cards = items.map(isWeb ? renderWebsite : renderBook).join("");
-  return `
-    <div class="type-block">
-      <p class="type-label">${esc(label)}</p>
-      <div class="grid ${isWeb ? "websites" : ""}">${cards}</div>
-    </div>`;
-}
-
-/* ---------- Render toàn bộ ---------- */
+/* ---------- Render toàn bộ (kiểu kệ section App Store) ---------- */
 function render() {
   const q = state.query.trim().toLowerCase();
   const searching = q.length > 0;
@@ -212,54 +181,30 @@ function render() {
   let total = 0;
 
   for (const cat of cats) {
-    let catHtml = "";
-
     for (const topic of cat.topics || []) {
       const items = (topic.items || []).filter((it) => matchQuery(it, q));
-      const books = items.filter((it) => it.type !== "website");
-      const webs = items.filter((it) => it.type === "website");
       total += items.length;
 
       // Khi đang tìm kiếm, bỏ qua chủ đề không có kết quả
       if (searching && !items.length) continue;
 
-      let body;
-      if (!items.length) {
-        body = `<div class="placeholder">${svgIcon("sakura", 30)} Sắp cập nhật nhé!</div>`;
-      } else {
-        body =
-          renderTypeBlock("Tài liệu", books, false) +
-          renderTypeBlock("App & Website", webs, true);
-      }
+      const body = items.length
+        ? `<div class="cells">${items.map(renderCell).join("")}</div>`
+        : `<div class="placeholder">${svgIcon("sakura", 28)} Sắp cập nhật nhé!</div>`;
 
-      catHtml += `
-        <section class="topic" id="sub-${esc(topic.id)}">
-          <div class="topic-head">
-            <span class="topic-ic">${svgIcon(topic.icon || "book", 30)}</span>
-            <div>
-              <h3>${esc(topic.name)}</h3>
-              ${topic.description ? `<p class="topic-desc">${esc(topic.description)}</p>` : ""}
+      html += `
+        <section class="shelf" id="sub-${esc(topic.id)}">
+          <div class="shelf-head">
+            <div class="shelf-titles">
+              <p class="shelf-eyebrow">${svgIcon(cat.icon || "book", 16)} ${esc(cat.name)}</p>
+              <h2>${esc(topic.name)}</h2>
+              ${topic.description ? `<p class="shelf-desc">${esc(topic.description)}</p>` : ""}
             </div>
-            ${items.length ? `<span class="section-count">${items.length}</span>` : ""}
+            ${items.length ? `<span class="shelf-count">${items.length} mục</span>` : ""}
           </div>
           ${body}
         </section>`;
     }
-
-    if (!catHtml) continue;
-
-    if (state.active === "all") {
-      html += `
-        <div class="cat-divider" id="cat-${esc(cat.id)}">
-          <span class="cat-ic">${svgIcon(cat.icon || "book", 32)}</span>
-          <div>
-            <h2>${esc(cat.name)}</h2>
-            ${cat.description ? `<p class="cat-desc">${esc(cat.description)}</p>` : ""}
-          </div>
-          <span class="line"></span>
-        </div>`;
-    }
-    html += catHtml;
   }
 
   if (searching && !total) {
@@ -315,6 +260,14 @@ function init() {
   $("#brandName").textContent = siteData.siteName || "Linh Chi";
   if (siteData.tagline) $("#heroSub").textContent = siteData.tagline;
   document.title = (siteData.siteName || "Linh Chi") + " · Kho kiến thức";
+
+  // Dòng ngày kiểu tab "Today" của App Store
+  const eyebrow = $(".hero-eyebrow");
+  if (eyebrow) {
+    const d = new Date();
+    const wd = ["CHỦ NHẬT", "THỨ HAI", "THỨ BA", "THỨ TƯ", "THỨ NĂM", "THỨ SÁU", "THỨ BẢY"][d.getDay()];
+    eyebrow.textContent = `${wd}, ${d.getDate()} THÁNG ${d.getMonth() + 1}`;
+  }
 
   $("#brandLogo").innerHTML = svgIcon("cat", 30);
   $("#discoverIcon").innerHTML = svgIcon("sparkles", 24);
