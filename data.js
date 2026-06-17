@@ -30,7 +30,7 @@
 
 const siteData = {
   siteName: "Linh Chi",
-  tagline: "Sách hay, tài liệu và app hữu ích — gom hết về một nơi dễ thương 🌸",
+  tagline: "Sách hay, tài liệu và app hữu ích",
 
   categories: [
     /* ==================== HỌC TẬP ==================== */
