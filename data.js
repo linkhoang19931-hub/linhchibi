@@ -21,11 +21,43 @@ const siteData = {
           "description": "Ngôn ngữ · 日本語",
           "items": [
             {
-              "title": "Sách học tiếng Nhật",
+              "title": "Sách tiếng Nhật N5",
               "type": "book",
-              "desc": "Giáo trình PDF · Google Drive",
-              "url": "https://drive.google.com/file/d/1HqmRujh8ZYCbcZJiEzIU3tINI8nx8wiX/view?usp=drive_link",
-              "tag": "PDF",
+              "desc": "Giáo trình N5 · Google Drive",
+              "url": "https://drive.google.com/file/d/1mHxMhPQReFexggNsg53u9KsNBog9xaiF/view?usp=drive_link",
+              "tag": "N5",
+              "icon": "book"
+            },
+            {
+              "title": "Sách tiếng Nhật N4 (1)",
+              "type": "book",
+              "desc": "Giáo trình N4 · Google Drive",
+              "url": "https://drive.google.com/file/d/1lGCAIhZeh-t7fMO3V3EWwUXOdeCnXH_-/view?usp=drive_link",
+              "tag": "N4",
+              "icon": "book"
+            },
+            {
+              "title": "Sách tiếng Nhật N4 (2)",
+              "type": "book",
+              "desc": "Giáo trình N4 · Google Drive",
+              "url": "https://drive.google.com/file/d/1n2gVDt99FXTppOtzHJQ_Lj8Itu8pCFD4/view?usp=sharing",
+              "tag": "N4",
+              "icon": "book"
+            },
+            {
+              "title": "Sách tiếng Nhật N2",
+              "type": "book",
+              "desc": "Giáo trình N2 · Google Drive",
+              "url": "https://drive.google.com/file/d/1yWcNMboPmwtOKkCqPg5Lf-VnH188KGLc/view?usp=drive_link",
+              "tag": "N2",
+              "icon": "book"
+            },
+            {
+              "title": "Sách tiếng Nhật N1",
+              "type": "book",
+              "desc": "Giáo trình N1 · Google Drive",
+              "url": "https://drive.google.com/file/d/10_EEJb517zAl1QaWscoJGCwOx5dcZ6Cy/view?usp=drive_link",
+              "tag": "N1",
               "icon": "book"
             },
             {
