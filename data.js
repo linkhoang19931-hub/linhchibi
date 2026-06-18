@@ -29,7 +29,7 @@ const siteData = {
               "icon": "book"
             },
             {
-              "title": "Sách tiếng Nhật N4 (1)",
+              "title": "Sách tiếng Nhật N4",
               "type": "book",
               "desc": "Giáo trình N4 · Google Drive",
               "url": "https://drive.google.com/file/d/1lGCAIhZeh-t7fMO3V3EWwUXOdeCnXH_-/view?usp=drive_link",
@@ -37,11 +37,11 @@ const siteData = {
               "icon": "book"
             },
             {
-              "title": "Sách tiếng Nhật N4 (2)",
+              "title": "Sách tiếng Nhật N3",
               "type": "book",
-              "desc": "Giáo trình N4 · Google Drive",
-              "url": "https://drive.google.com/file/d/1n2gVDt99FXTppOtzHJQ_Lj8Itu8pCFD4/view?usp=sharing",
-              "tag": "N4",
+              "desc": "Giáo trình N3 · Google Drive",
+              "url": "https://drive.google.com/file/d/1n2gVDt99FXTppOtzHJQ_Lj8Itu8pCFD4/view?usp=drive_link",
+              "tag": "N3",
               "icon": "book"
             },
             {
