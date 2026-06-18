@@ -546,3 +546,15 @@ body.theme-dark .petals span { opacity: .35; }
 @media (max-width: 860px) {
   .pp-box { inset: 0; border-radius: 0; max-width: none; }
 }
+
+/* Nhóm con trong 1 chủ đề (vd "Tiếng Nhật" trong "Ngôn ngữ") */
+.group { margin: 16px 0 4px; }
+.group + .group { margin-top: 26px; }
+.group-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.group-ic {
+  width: 34px; height: 34px; display: grid; place-items: center; flex-shrink: 0;
+  background: var(--card); border: 1px solid var(--hairline); border-radius: 10px; box-shadow: var(--shadow-1);
+}
+.group-head h3 { font-size: 17px; font-weight: 700; line-height: 1.1; }
+.group-head .shelf-progress { margin-left: auto; }
+.group .filter-bar { margin: 0 0 14px; }

@@ -15,14 +15,15 @@ const siteData = {
       "description": "Học mỗi ngày một chút — がんばって！",
       "topics": [
         {
-          "id": "tieng-nhat",
-          "name": "Tiếng Nhật",
-          "icon": "torii",
-          "description": "Ngôn ngữ · 日本語",
+          "id": "ngon-ngu",
+          "name": "Ngôn ngữ",
+          "icon": "globe",
+          "description": "Ngoại ngữ — mỗi ngày một chút",
           "items": [
             {
               "title": "Sách tiếng Nhật N5",
               "type": "book",
+              "group": "Tiếng Nhật",
               "desc": "Giáo trình N5 · Google Drive",
               "url": "https://drive.google.com/file/d/1mHxMhPQReFexggNsg53u9KsNBog9xaiF/view?usp=drive_link",
               "tag": "N5",
@@ -31,6 +32,7 @@ const siteData = {
             {
               "title": "Sách tiếng Nhật N4",
               "type": "book",
+              "group": "Tiếng Nhật",
               "desc": "Giáo trình N4 · Google Drive",
               "url": "https://drive.google.com/file/d/1lGCAIhZeh-t7fMO3V3EWwUXOdeCnXH_-/view?usp=drive_link",
               "tag": "N4",
@@ -39,6 +41,7 @@ const siteData = {
             {
               "title": "Sách tiếng Nhật N3",
               "type": "book",
+              "group": "Tiếng Nhật",
               "desc": "Giáo trình N3 · Google Drive",
               "url": "https://drive.google.com/file/d/1n2gVDt99FXTppOtzHJQ_Lj8Itu8pCFD4/view?usp=drive_link",
               "tag": "N3",
@@ -47,6 +50,7 @@ const siteData = {
             {
               "title": "Sách tiếng Nhật N2",
               "type": "book",
+              "group": "Tiếng Nhật",
               "desc": "Giáo trình N2 · Google Drive",
               "url": "https://drive.google.com/file/d/1yWcNMboPmwtOKkCqPg5Lf-VnH188KGLc/view?usp=drive_link",
               "tag": "N2",
@@ -55,6 +59,7 @@ const siteData = {
             {
               "title": "Sách tiếng Nhật N1",
               "type": "book",
+              "group": "Tiếng Nhật",
               "desc": "Giáo trình N1 · Google Drive",
               "url": "https://drive.google.com/file/d/10_EEJb517zAl1QaWscoJGCwOx5dcZ6Cy/view?usp=drive_link",
               "tag": "N1",
@@ -63,6 +68,7 @@ const siteData = {
             {
               "title": "App học tiếng Nhật Chibi",
               "type": "website",
+              "group": "Tiếng Nhật",
               "desc": "Học từ vựng & kaiwa online",
               "url": "https://linkhoang19931-hub.github.io/linhchibi_japan/#home",
               "tag": "App",

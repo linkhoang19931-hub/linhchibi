@@ -272,30 +272,40 @@ function matchQuery(item, q) {
   );
 }
 
+/* ---------- Helpers render ---------- */
+function cellsGrid(items, cat, topic, allItems) {
+  return `<div class="cells">${items
+    .map((it) => renderCell(it, `${cat.id}/${topic.id}/${allItems.indexOf(it)}`))
+    .join("")}</div>`;
+}
+function progressHTML(items) {
+  if (admin.authed || !items.length) return "";
+  const doneN = items.filter((it) => isDone(it.url)).length;
+  const pct = Math.round((doneN / items.length) * 100);
+  return `<div class="shelf-progress" title="${doneN}/${items.length} đã học">
+            <span class="sp-bar"><span style="width:${pct}%"></span></span>
+            <span class="sp-txt">${doneN}/${items.length}</span>
+          </div>`;
+}
+function tagChips(groupItems) {
+  const tags = [];
+  for (const it of groupItems) if (it.tag && !tags.includes(it.tag)) tags.push(it.tag);
+  if (tags.length < 2) return "";
+  return `<div class="filter-bar">
+      <button type="button" class="chip ${!state.filterTag ? "is-on" : ""}" data-filter-tag="">Tất cả</button>
+      ${tags.map((tg) => `<button type="button" class="chip ${state.filterTag === tg ? "is-on" : ""}" data-filter-tag="${esc(tg)}">${esc(tg)}</button>`).join("")}
+    </div>`;
+}
+
 /* ---------- Render toàn bộ ---------- */
 function render() {
   const q = state.query.trim().toLowerCase();
   const searching = q.length > 0;
+  const filtering = searching || !!state.filterTag;
   const cats = data.categories.filter(
     (c) => state.active === "all" || c.id === state.active
   );
 
-  // Thanh lọc theo nhãn (tag) trong phạm vi đang xem
-  const tagsInScope = [];
-  for (const cat of cats)
-    for (const t of cat.topics || [])
-      for (const it of t.items || [])
-        if (it.tag && !tagsInScope.includes(it.tag)) tagsInScope.push(it.tag);
-
-  let chipsHtml = "";
-  if (tagsInScope.length >= 2) {
-    chipsHtml = `<div class="filter-bar">
-      <button type="button" class="chip ${!state.filterTag ? "is-on" : ""}" data-filter-tag="">Tất cả</button>
-      ${tagsInScope.map((tg) => `<button type="button" class="chip ${state.filterTag === tg ? "is-on" : ""}" data-filter-tag="${esc(tg)}">${esc(tg)}</button>`).join("")}
-    </div>`;
-  }
-
-  const filtering = searching || !!state.filterTag;
   let html = "";
   let total = 0;
 
@@ -306,21 +316,44 @@ function render() {
         (it) => matchQuery(it, q) && (!state.filterTag || (it.tag || "") === state.filterTag)
       );
       total += items.length;
-
       if (filtering && !items.length) continue;
 
-      // Tiến độ học (chỉ ở chế độ xem thường)
-      const doneN = items.filter((it) => isDone(it.url)).length;
-      const pct = items.length ? Math.round((doneN / items.length) * 100) : 0;
-      const progressHtml = items.length
-        ? `<div class="shelf-progress" title="${doneN}/${items.length} đã học">
-             <span class="sp-bar"><span style="width:${pct}%"></span></span>
-             <span class="sp-txt">${doneN}/${items.length}</span>
-           </div>`
-        : "";
+      // Gom mục theo nhóm (item.group), giữ thứ tự xuất hiện
+      const groups = new Map();
+      for (const it of items) {
+        const g = (it.group || "").trim();
+        if (!groups.has(g)) groups.set(g, []);
+        groups.get(g).push(it);
+      }
+      const hasNamedGroups = [...groups.keys()].some((k) => k !== "");
+
+      let body = "";
+      if (!items.length) {
+        body = `<div class="placeholder">${svgIcon("sakura", 28)} Sắp cập nhật nhé!</div>`;
+      } else {
+        for (const [gname, gitems] of groups) {
+          if (gname === "") {
+            body += cellsGrid(gitems, cat, topic, allItems);
+          } else {
+            const allOfGroup = allItems.filter((it) => (it.group || "").trim() === gname);
+            const gicon = gitems[0].icon || "book";
+            body += `
+              <div class="group" id="grp-${esc(slugify(gname))}">
+                <div class="group-head">
+                  <span class="group-ic">${svgIcon(gicon, 22)}</span>
+                  <h3>${esc(gname)}</h3>
+                  ${progressHTML(gitems)}
+                </div>
+                ${tagChips(allOfGroup)}
+                ${cellsGrid(gitems, cat, topic, allItems)}
+              </div>`;
+          }
+        }
+      }
+
       const rightHtml = admin.authed
         ? (items.length ? `<span class="shelf-count">${items.length} mục</span>` : "")
-        : progressHtml;
+        : (hasNamedGroups ? "" : progressHTML(items));
 
       const adminTopicCtrls = admin.authed ? `
         <span class="shelf-edit">
@@ -328,10 +361,6 @@ function render() {
           <button type="button" class="ce-btn" data-admin="edit-topic" data-path="${esc(cat.id)}/${esc(topic.id)}" title="Sửa chủ đề">✎</button>
           <button type="button" class="ce-btn ce-del" data-admin="del-topic" data-path="${esc(cat.id)}/${esc(topic.id)}" title="Xoá chủ đề">🗑</button>
         </span>` : "";
-
-      const body = items.length
-        ? `<div class="cells">${items.map((it, i) => renderCell(it, `${cat.id}/${topic.id}/${allItems.indexOf(it)}`)).join("")}</div>`
-        : `<div class="placeholder">${svgIcon("sakura", 28)} Sắp cập nhật nhé!</div>`;
 
       html += `
         <section class="shelf" id="sub-${esc(topic.id)}">
@@ -364,9 +393,7 @@ function render() {
   }
 
   if (filtering && !total) {
-    html = chipsHtml + `<div class="empty"><span class="big">${svgIcon("sakura", 64)}</span>Không tìm thấy nội dung nào.<br/>Thử từ khoá / nhãn khác nhé!</div>`;
-  } else {
-    html = chipsHtml + html;
+    html = `<div class="empty"><span class="big">${svgIcon("sakura", 64)}</span>Không tìm thấy nội dung nào.<br/>Thử từ khoá / nhãn khác nhé!</div>`;
   }
 
   $("#sections").innerHTML = html;
@@ -899,9 +926,14 @@ const admin = {
     if (!topic) return;
     const idx = isNew ? -1 : parseInt(idxStr, 10);
     const item = isNew
-      ? { title: "", type: "book", url: "", desc: "", tag: "", icon: "book", cover: "" }
+      ? { title: "", type: "book", group: "", url: "", desc: "", tag: "", icon: "book", cover: "" }
       : topic.items[idx];
     if (!item) return;
+
+    const groupNames = [...new Set(
+      data.categories.flatMap((c) => (c.topics || []).flatMap((t) => (t.items || []).map((i) => (i.group || "").trim()).filter(Boolean)))
+    )];
+    const groupOpts = groupNames.map((g) => `<option value="${esc(g)}"></option>`).join("");
 
     openModal(`
       <h2 class="modal-title">${isNew ? "Thêm mục" : "Sửa mục"}</h2>
@@ -932,6 +964,10 @@ const admin = {
             <input name="tag" value="${esc(item.tag || "")}" placeholder="PDF, App..." />
           </label>
         </div>
+        <label>Nhóm (tuỳ chọn — vd "Tiếng Nhật")
+          <input name="group" value="${esc(item.group || "")}" list="groupNames" placeholder="Để trống nếu không gom nhóm" />
+          <datalist id="groupNames">${groupOpts}</datalist>
+        </label>
         <label>Ảnh bìa (URL — để trống thì dùng icon + màu gradient)
           <input name="cover" value="${esc(item.cover || "")}" type="url" placeholder="https://..." />
         </label>
@@ -956,6 +992,7 @@ const admin = {
         url: (fd.get("url") || "").trim(),
         desc: (fd.get("desc") || "").trim(),
         type: fd.get("type") || "book",
+        group: (fd.get("group") || "").trim(),
         tag: (fd.get("tag") || "").trim(),
         cover: (fd.get("cover") || "").trim(),
         icon: fd.get("icon") || "book",
