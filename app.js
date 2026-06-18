@@ -350,7 +350,6 @@ function render() {
                   <h3>${esc(gname)}</h3>
                   ${progressHTML(gitems)}
                 </div>
-                ${typeChips(allOfGroup)}
                 ${cellsGrid(gitems, cat, topic, allItems)}
               </div>`;
           }
@@ -379,6 +378,7 @@ function render() {
             ${rightHtml}
             ${adminTopicCtrls}
           </div>
+          ${typeChips(allItems)}
           ${body}
         </section>`;
     }
