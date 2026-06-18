@@ -291,11 +291,9 @@ function typeMatch(it) {
   if (!state.filterType) return true;
   return state.filterType === "website" ? it.type === "website" : it.type !== "website";
 }
-// Chip lọc theo LOẠI: Tất cả / Sách / App (chỉ hiện khi nhóm có cả 2 loại)
+// Chip lọc theo LOẠI: Tất cả / Sách / App — luôn hiện khi chủ đề có mục.
 function typeChips(groupItems) {
-  const hasBook = groupItems.some((it) => it.type !== "website");
-  const hasWeb = groupItems.some((it) => it.type === "website");
-  if (!(hasBook && hasWeb)) return "";
+  if (!groupItems.length) return "";
   const chip = (val, label) =>
     `<button type="button" class="chip ${state.filterType === val ? "is-on" : ""}" data-filter-type="${val}">${label}</button>`;
   return `<div class="filter-bar">
