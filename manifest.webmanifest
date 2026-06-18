@@ -1,0 +1,17 @@
+{
+  "name": "Chỗ của Bi",
+  "short_name": "Bi Hub",
+  "description": "Kho sách, tài liệu và app học tập / công việc.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#fdf2f4",
+  "theme_color": "#e8688a",
+  "lang": "vi",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

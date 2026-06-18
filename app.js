@@ -150,7 +150,72 @@ function uniqueId(base, taken) {
 }
 function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
 
-const state = { active: "all", query: "" };
+/* ---------- Google Drive: lấy bìa & id ---------- */
+function driveId(url = "") {
+  const m =
+    String(url).match(/\/file\/d\/([a-zA-Z0-9_-]+)/) ||
+    String(url).match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  return m ? m[1] : "";
+}
+function driveThumb(url, w = 400) {
+  const id = driveId(url);
+  return id ? `https://drive.google.com/thumbnail?id=${id}&sz=w${w}` : "";
+}
+
+/* ---------- Tiến độ học (lưu localStorage) ---------- */
+const PROGRESS_KEY = "linhchi-progress-v1";
+let progress = {};
+try { progress = JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {}; } catch { progress = {}; }
+function isDone(url) { return !!progress[url]; }
+function toggleDone(url) {
+  if (progress[url]) delete progress[url];
+  else progress[url] = 1;
+  try { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); } catch {}
+}
+
+/* ---------- Dark mode ---------- */
+const THEME_KEY = "linhchi-theme";
+function applyTheme(mode) {
+  document.body.classList.toggle("theme-dark", mode === "dark");
+  const tc = document.querySelector('meta[name="theme-color"]');
+  if (tc) tc.setAttribute("content", mode === "dark" ? "#1f1a1d" : "#e8688a");
+  const btn = $("#themeToggle");
+  if (btn) btn.textContent = mode === "dark" ? "☀️" : "🌙";
+}
+function toggleTheme() {
+  const next = document.body.classList.contains("theme-dark") ? "light" : "dark";
+  try { localStorage.setItem(THEME_KEY, next); } catch {}
+  applyTheme(next);
+}
+
+/* ---------- Xem nhanh PDF (Google Drive preview) ---------- */
+function openPreview(fileId) {
+  let ov = document.getElementById("pdfPreview");
+  if (!ov) {
+    ov = document.createElement("div");
+    ov.id = "pdfPreview";
+    ov.className = "pdf-preview";
+    ov.innerHTML = `
+      <div class="pp-backdrop" data-pp-close></div>
+      <div class="pp-box">
+        <button class="pp-close" type="button" data-pp-close aria-label="Đóng">×</button>
+        <div class="pp-frame"></div>
+      </div>`;
+    document.body.appendChild(ov);
+    ov.addEventListener("click", (e) => { if (e.target.closest("[data-pp-close]")) closePreview(); });
+  }
+  ov.querySelector(".pp-frame").innerHTML =
+    `<iframe src="https://drive.google.com/file/d/${fileId}/preview" allow="autoplay" loading="lazy"></iframe>`;
+  ov.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closePreview() {
+  const ov = document.getElementById("pdfPreview");
+  if (ov) { ov.classList.remove("open"); ov.querySelector(".pp-frame").innerHTML = ""; }
+  document.body.style.overflow = "";
+}
+
+const state = { active: "all", query: "", filterTag: "" };
 
 // `savedData` = bản đã publish (snapshot từ siteData hoặc từ lần publish gần nhất).
 // `data` = bản đang hiển thị; ở chế độ admin, có thể là bản nháp (đã sửa).
@@ -161,10 +226,20 @@ let data = deepClone(savedData);
 function renderCell(item, path) {
   const [c1, c2] = paletteFor(item.title);
   const isWeb = item.type === "website";
-  const iconStyle = item.cover
-    ? `background-image:url('${esc(item.cover)}');background-size:cover;background-position:center`
-    : `background:linear-gradient(150deg, ${c1}, ${c2})`;
-  const iconInner = item.cover ? "" : svgIcon(item.icon || (isWeb ? "globe" : "book"), 38);
+  const bg = `background:linear-gradient(150deg, ${c1}, ${c2})`;
+  const iconInner = svgIcon(item.icon || (isWeb ? "globe" : "book"), 38);
+  // Bìa: ưu tiên ảnh tự nhập; nếu là sách Drive thì tự lấy thumbnail.
+  const coverUrl = item.cover || (!isWeb ? driveThumb(item.url, 400) : "");
+  const coverImg = coverUrl
+    ? `<img class="cell-cover" src="${esc(coverUrl)}" alt="" loading="lazy" referrerpolicy="no-referrer" onerror="this.remove()" />`
+    : "";
+
+  const done = !admin.authed && isDone(item.url);
+  const fileId = !isWeb ? driveId(item.url) : "";
+
+  const userCtrls = !admin.authed ? `
+    ${fileId ? `<button type="button" class="cell-mini preview-btn" data-preview="${esc(fileId)}" title="Xem nhanh">👁</button>` : ""}
+    <button type="button" class="cell-mini done-btn ${done ? "is-done" : ""}" data-done="${esc(item.url)}" title="Đánh dấu đã học/đọc">✓</button>` : "";
 
   const adminCtrls = admin.authed ? `
     <span class="cell-edit">
@@ -175,13 +250,14 @@ function renderCell(item, path) {
     </span>` : "";
 
   return `
-    <a class="cell" href="${esc(item.url)}" target="_blank" rel="noopener">
-      <span class="cell-icon" style="${iconStyle}">${iconInner}</span>
+    <a class="cell ${done ? "cell-done" : ""}" href="${esc(item.url)}" target="_blank" rel="noopener">
+      <span class="cell-icon" style="${bg}">${iconInner}${coverImg}</span>
       <span class="cell-main">
         <span class="cell-title">${esc(item.title)}</span>
         ${item.desc ? `<span class="cell-sub">${esc(item.desc)}</span>` : ""}
         ${item.tag ? `<span class="cell-tag">${esc(item.tag)}</span>` : ""}
       </span>
+      ${userCtrls}
       <span class="get-btn">Mở</span>
       ${adminCtrls}
     </a>`;
@@ -204,16 +280,47 @@ function render() {
     (c) => state.active === "all" || c.id === state.active
   );
 
+  // Thanh lọc theo nhãn (tag) trong phạm vi đang xem
+  const tagsInScope = [];
+  for (const cat of cats)
+    for (const t of cat.topics || [])
+      for (const it of t.items || [])
+        if (it.tag && !tagsInScope.includes(it.tag)) tagsInScope.push(it.tag);
+
+  let chipsHtml = "";
+  if (tagsInScope.length >= 2) {
+    chipsHtml = `<div class="filter-bar">
+      <button type="button" class="chip ${!state.filterTag ? "is-on" : ""}" data-filter-tag="">Tất cả</button>
+      ${tagsInScope.map((tg) => `<button type="button" class="chip ${state.filterTag === tg ? "is-on" : ""}" data-filter-tag="${esc(tg)}">${esc(tg)}</button>`).join("")}
+    </div>`;
+  }
+
+  const filtering = searching || !!state.filterTag;
   let html = "";
   let total = 0;
 
   for (const cat of cats) {
     for (const topic of cat.topics || []) {
       const allItems = topic.items || [];
-      const items = allItems.filter((it) => matchQuery(it, q));
+      const items = allItems.filter(
+        (it) => matchQuery(it, q) && (!state.filterTag || (it.tag || "") === state.filterTag)
+      );
       total += items.length;
 
-      if (searching && !items.length) continue;
+      if (filtering && !items.length) continue;
+
+      // Tiến độ học (chỉ ở chế độ xem thường)
+      const doneN = items.filter((it) => isDone(it.url)).length;
+      const pct = items.length ? Math.round((doneN / items.length) * 100) : 0;
+      const progressHtml = items.length
+        ? `<div class="shelf-progress" title="${doneN}/${items.length} đã học">
+             <span class="sp-bar"><span style="width:${pct}%"></span></span>
+             <span class="sp-txt">${doneN}/${items.length}</span>
+           </div>`
+        : "";
+      const rightHtml = admin.authed
+        ? (items.length ? `<span class="shelf-count">${items.length} mục</span>` : "")
+        : progressHtml;
 
       const adminTopicCtrls = admin.authed ? `
         <span class="shelf-edit">
@@ -234,7 +341,7 @@ function render() {
               <h2>${esc(topic.name)}</h2>
               ${topic.description ? `<p class="shelf-desc">${esc(topic.description)}</p>` : ""}
             </div>
-            ${items.length ? `<span class="shelf-count">${items.length} mục</span>` : ""}
+            ${rightHtml}
             ${adminTopicCtrls}
           </div>
           ${body}
@@ -256,8 +363,10 @@ function render() {
       </div>`;
   }
 
-  if (searching && !total) {
-    html = `<div class="empty"><span class="big">${svgIcon("sakura", 64)}</span>Không tìm thấy nội dung nào.<br/>Thử từ khoá khác nhé!</div>`;
+  if (filtering && !total) {
+    html = chipsHtml + `<div class="empty"><span class="big">${svgIcon("sakura", 64)}</span>Không tìm thấy nội dung nào.<br/>Thử từ khoá / nhãn khác nhé!</div>`;
+  } else {
+    html = chipsHtml + html;
   }
 
   $("#sections").innerHTML = html;
@@ -282,7 +391,8 @@ function buildNav() {
            <span class="ce-btn ce-mini" data-admin="edit-category" data-path="${esc(cat.id)}" title="Sửa">✎</span>
            <span class="ce-btn ce-mini ce-del" data-admin="del-category" data-path="${esc(cat.id)}" title="Xoá">🗑</span>
          </span>` : "";
-    btn.innerHTML = `<span class="nav-emoji">${svgIcon(cat.icon || "book", 24)}</span> <span class="nav-label">${esc(cat.name)}</span>${adminPart}`;
+    const catCount = (cat.topics || []).reduce((s, t) => s + (t.items || []).length, 0);
+    btn.innerHTML = `<span class="nav-emoji">${svgIcon(cat.icon || "book", 24)}</span> <span class="nav-label">${esc(cat.name)}</span><span class="nav-count">${catCount}</span>${adminPart}`;
     nav.appendChild(btn);
 
     for (const topic of cat.topics || []) {
@@ -290,7 +400,8 @@ function buildNav() {
       s.className = "nav-item nav-sub";
       s.dataset.cat = cat.id;
       s.dataset.sub = topic.id;
-      s.textContent = topic.name;
+      const tn = (topic.items || []).length;
+      s.innerHTML = `<span class="nav-label">${esc(topic.name)}</span><span class="nav-count">${tn}</span>`;
       nav.appendChild(s);
     }
   }
@@ -930,6 +1041,52 @@ function init() {
       render();
     }, 120);
   });
+
+  // ----- Dark mode -----
+  let savedTheme = "light";
+  try { savedTheme = localStorage.getItem(THEME_KEY) || "light"; } catch {}
+  const foot = $(".sidebar-foot");
+  if (foot && !$("#themeToggle")) {
+    const tb = document.createElement("button");
+    tb.id = "themeToggle";
+    tb.type = "button";
+    tb.className = "theme-toggle";
+    tb.title = "Đổi nền sáng / tối";
+    tb.addEventListener("click", toggleTheme);
+    foot.appendChild(tb);
+  }
+  applyTheme(savedTheme);
+
+  // ----- Click: đã học / xem nhanh / lọc nhãn -----
+  document.addEventListener("click", (e) => {
+    const done = e.target.closest("[data-done]");
+    if (done) {
+      e.preventDefault(); e.stopPropagation();
+      toggleDone(done.getAttribute("data-done"));
+      render();
+      return;
+    }
+    const prev = e.target.closest("[data-preview]");
+    if (prev) {
+      e.preventDefault(); e.stopPropagation();
+      openPreview(prev.getAttribute("data-preview"));
+      return;
+    }
+    const chip = e.target.closest("[data-filter-tag]");
+    if (chip) {
+      e.preventDefault();
+      state.filterTag = chip.getAttribute("data-filter-tag");
+      render();
+    }
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") closePreview();
+  });
+
+  // ----- PWA -----
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+  }
 
   admin.init();
 }

@@ -451,3 +451,98 @@ body.admin-mode .cell .get-btn { background: var(--accent-soft); color: var(--ac
   body.admin-mode { padding-top: 84px; }
   .admin-btn { width: auto; }
 }
+
+/* ============================================================
+   TÍNH NĂNG MỚI: bìa Drive, tiến độ, lọc nhãn, dark mode, PDF
+   ============================================================ */
+
+/* Bìa sách Google Drive (đè lên icon, lỗi thì tự ẩn → hiện lại icon) */
+.cell-icon { position: relative; }
+.cell-cover { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+
+/* Nút nhỏ trên cell: xem nhanh + đã học */
+.cell-mini {
+  flex-shrink: 0; width: 30px; height: 30px; border: none; cursor: pointer; padding: 0;
+  border-radius: 50%; background: var(--get-bg); color: var(--ink-soft);
+  font-size: 14px; line-height: 1; display: grid; place-items: center;
+  transition: background .15s, color .15s, transform .1s;
+}
+.cell-mini:hover { transform: scale(1.1); }
+.preview-btn:hover { background: #d7ecff; color: #2b6cb0; }
+.done-btn { color: transparent; background: transparent; box-shadow: inset 0 0 0 1.6px var(--hairline); }
+.cell:hover .done-btn { color: var(--ink-faint); }
+.done-btn.is-done { background: #46b67a; color: #fff; box-shadow: none; }
+.cell-done .cell-title { color: var(--ink-faint); }
+.cell-done .cell-icon { opacity: .55; }
+
+/* Thanh tiến độ học ở đầu chủ đề */
+.shelf-progress { display: flex; align-items: center; gap: 8px; white-space: nowrap; }
+.sp-bar { width: 64px; height: 7px; border-radius: 99px; background: var(--hairline); overflow: hidden; }
+.sp-bar > span { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #ffb3c8, #46b67a); transition: width .3s; }
+.sp-txt { font-size: 12px; font-weight: 700; color: var(--ink-faint); }
+
+/* Thanh lọc nhãn (chip) */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+.chip {
+  border: 1px solid var(--hairline); background: var(--card); cursor: pointer;
+  font: inherit; font-size: 13px; font-weight: 700; color: var(--ink-soft);
+  padding: 6px 15px; border-radius: 999px; transition: background .15s, color .15s, border-color .15s;
+}
+.chip:hover { border-color: var(--accent); color: var(--accent-deep); }
+.chip.is-on { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+/* Badge đếm ở sidebar */
+.nav-count {
+  margin-left: auto; font-size: 11px; font-weight: 700; color: var(--ink-faint);
+  background: var(--get-bg); padding: 1px 8px; border-radius: 999px; min-width: 20px; text-align: center;
+}
+.nav-item.active .nav-count { background: rgba(255,255,255,.3); color: #fff; }
+.nav-sub .nav-count { background: transparent; }
+.nav-sub { display: flex; align-items: center; }
+
+/* Nút đổi nền sáng/tối */
+.theme-toggle {
+  margin-top: 10px; width: 100%; border: 1px solid var(--hairline); background: var(--card);
+  cursor: pointer; font-size: 16px; padding: 7px; border-radius: 10px; transition: background .15s;
+}
+.theme-toggle:hover { background: var(--get-bg); }
+
+/* Popup xem nhanh PDF */
+.pdf-preview { position: fixed; inset: 0; z-index: 400; display: none; }
+.pdf-preview.open { display: block; }
+.pp-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,.6); }
+.pp-box {
+  position: absolute; inset: 3vh 4vw; max-width: 900px; margin: 0 auto;
+  background: #fff; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 30px 80px rgba(0,0,0,.4); display: flex; flex-direction: column;
+}
+.pp-close {
+  position: absolute; top: 10px; right: 12px; z-index: 2; width: 34px; height: 34px;
+  border: none; border-radius: 50%; background: rgba(0,0,0,.5); color: #fff;
+  font-size: 22px; line-height: 1; cursor: pointer;
+}
+.pp-frame, .pp-frame iframe { width: 100%; height: 100%; border: 0; flex: 1; }
+
+/* ---------- DARK MODE ---------- */
+body.theme-dark {
+  --bg: #1e191c; --ink: #f3ecee; --ink-soft: #cabcc0; --ink-faint: #9a8c90;
+  --card: #2a2226; --hairline: rgba(255,255,255,.1); --get-bg: #3a3036; --accent-soft: #4a2a32;
+  background:
+    radial-gradient(900px 480px at 84% -6%, #3a2530 0%, transparent 56%),
+    radial-gradient(760px 440px at 8% 4%, #2e2620 0%, transparent 52%),
+    linear-gradient(180deg, #241c20 0%, var(--bg) 40%, var(--bg) 100%);
+}
+body.theme-dark .sidebar { background: rgba(40,32,36,.72); border-color: rgba(255,255,255,.08); }
+body.theme-dark .hero {
+  background: linear-gradient(118deg, #3c2730 0%, #322329 52%, #28302a 100%);
+  border-color: rgba(255,255,255,.06);
+}
+body.theme-dark .hero h1 { color: #f6eef0; }
+body.theme-dark .search { background: rgba(255,255,255,.08); }
+body.theme-dark .cell:hover { background: rgba(255,255,255,.05); }
+body.theme-dark .brand-logo { background: linear-gradient(140deg,#5a2f3c,#7a3a4c); }
+body.theme-dark .petals span { opacity: .35; }
+
+@media (max-width: 860px) {
+  .pp-box { inset: 0; border-radius: 0; max-width: none; }
+}
