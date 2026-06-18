@@ -215,7 +215,7 @@ function closePreview() {
   document.body.style.overflow = "";
 }
 
-const state = { active: "all", query: "", filterTag: "" };
+const state = { active: "all", query: "", filterType: "" };
 
 // `savedData` = bản đã publish (snapshot từ siteData hoặc từ lần publish gần nhất).
 // `data` = bản đang hiển thị; ở chế độ admin, có thể là bản nháp (đã sửa).
@@ -287,13 +287,21 @@ function progressHTML(items) {
             <span class="sp-txt">${doneN}/${items.length}</span>
           </div>`;
 }
-function tagChips(groupItems) {
-  const tags = [];
-  for (const it of groupItems) if (it.tag && !tags.includes(it.tag)) tags.push(it.tag);
-  if (tags.length < 2) return "";
+function typeMatch(it) {
+  if (!state.filterType) return true;
+  return state.filterType === "website" ? it.type === "website" : it.type !== "website";
+}
+// Chip lọc theo LOẠI: Tất cả / Sách / App (chỉ hiện khi nhóm có cả 2 loại)
+function typeChips(groupItems) {
+  const hasBook = groupItems.some((it) => it.type !== "website");
+  const hasWeb = groupItems.some((it) => it.type === "website");
+  if (!(hasBook && hasWeb)) return "";
+  const chip = (val, label) =>
+    `<button type="button" class="chip ${state.filterType === val ? "is-on" : ""}" data-filter-type="${val}">${label}</button>`;
   return `<div class="filter-bar">
-      <button type="button" class="chip ${!state.filterTag ? "is-on" : ""}" data-filter-tag="">Tất cả</button>
-      ${tags.map((tg) => `<button type="button" class="chip ${state.filterTag === tg ? "is-on" : ""}" data-filter-tag="${esc(tg)}">${esc(tg)}</button>`).join("")}
+      <button type="button" class="chip ${!state.filterType ? "is-on" : ""}" data-filter-type="">Tất cả</button>
+      ${chip("book", "Sách")}
+      ${chip("website", "App")}
     </div>`;
 }
 
@@ -301,7 +309,7 @@ function tagChips(groupItems) {
 function render() {
   const q = state.query.trim().toLowerCase();
   const searching = q.length > 0;
-  const filtering = searching || !!state.filterTag;
+  const filtering = searching || !!state.filterType;
   const cats = data.categories.filter(
     (c) => state.active === "all" || c.id === state.active
   );
@@ -312,9 +320,7 @@ function render() {
   for (const cat of cats) {
     for (const topic of cat.topics || []) {
       const allItems = topic.items || [];
-      const items = allItems.filter(
-        (it) => matchQuery(it, q) && (!state.filterTag || (it.tag || "") === state.filterTag)
-      );
+      const items = allItems.filter((it) => matchQuery(it, q) && typeMatch(it));
       total += items.length;
       if (filtering && !items.length) continue;
 
@@ -344,7 +350,7 @@ function render() {
                   <h3>${esc(gname)}</h3>
                   ${progressHTML(gitems)}
                 </div>
-                ${tagChips(allOfGroup)}
+                ${typeChips(allOfGroup)}
                 ${cellsGrid(gitems, cat, topic, allItems)}
               </div>`;
           }
@@ -1109,10 +1115,10 @@ function init() {
       openPreview(prev.getAttribute("data-preview"));
       return;
     }
-    const chip = e.target.closest("[data-filter-tag]");
+    const chip = e.target.closest("[data-filter-type]");
     if (chip) {
       e.preventDefault();
-      state.filterTag = chip.getAttribute("data-filter-tag");
+      state.filterType = chip.getAttribute("data-filter-type");
       render();
     }
   });
