@@ -75,6 +75,22 @@ const siteData = {
               "icon": "torii"
             }
           ]
+        },
+        {
+          "id": "toan",
+          "name": "Toán",
+          "icon": "sparkles",
+          "description": "Sách & tài liệu Toán",
+          "items": [
+            {
+              "title": "Xác suất thống kê",
+              "type": "book",
+              "desc": "Giáo trình Xác suất thống kê · Google Drive",
+              "url": "https://drive.google.com/file/d/1mv1DzPQ2Y0WCWJ842Vhk8f4RCu7MTuwL/view?usp=drive_link",
+              "tag": "PDF",
+              "icon": "book"
+            }
+          ]
         }
       ]
     },
