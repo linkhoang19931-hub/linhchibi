@@ -91,15 +91,7 @@ const siteData = {
               "icon": "book"
             }
           ]
-        }
-      ]
-    },
-    {
-      "id": "cong-viec",
-      "name": "Công việc",
-      "icon": "scale",
-      "description": "Tài liệu & công cụ phục vụ công việc.",
-      "topics": [
+        },
         {
           "id": "luat",
           "name": "Luật",
@@ -123,7 +115,15 @@ const siteData = {
               "icon": "courthouse"
             }
           ]
-        },
+        }
+      ]
+    },
+    {
+      "id": "cong-viec",
+      "name": "Công việc",
+      "icon": "scale",
+      "description": "Tài liệu & công cụ phục vụ công việc.",
+      "topics": [
         {
           "id": "cong-nghe",
           "name": "Công nghệ",
