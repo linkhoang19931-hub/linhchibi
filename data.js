@@ -89,6 +89,14 @@ const siteData = {
               "url": "https://drive.google.com/file/d/1mv1DzPQ2Y0WCWJ842Vhk8f4RCu7MTuwL/view?usp=drive_link",
               "tag": "PDF",
               "icon": "book"
+            },
+            {
+              "title": "App học Toán Chibi",
+              "type": "website",
+              "desc": "Học & luyện Toán online",
+              "url": "https://linkhoang19931-hub.github.io/math/",
+              "tag": "App",
+              "icon": "math"
             }
           ]
         },
