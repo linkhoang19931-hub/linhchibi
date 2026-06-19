@@ -101,6 +101,16 @@ const ICONS = {
 
   cloud: `
     <path d="M13 33 Q7 33 7 27.5 Q7 22 13 22 Q14 14 23 15 Q31 15 31 23 Q39 22.5 39 29 Q39 33 33 33 Z" fill="#ffffff" stroke="#e0c9d0" stroke-width="1.6"/>`,
+
+  math: `
+    <rect x="8" y="7" width="32" height="34" rx="6" fill="#d3e9f2" stroke="#5e4b4b" stroke-width="2.2"/>
+    <path d="M15 23 H33" stroke="#5e4b4b" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M20 23 V34" stroke="#5e4b4b" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M28 23 V34" stroke="#5e4b4b" stroke-width="2.8" stroke-linecap="round"/>
+    <path d="M12 14 H17 M14.5 11.5 V16.5" stroke="#e8688a" stroke-width="2" stroke-linecap="round"/>
+    <path d="M31 12.5 L35 16.5 M35 12.5 L31 16.5" stroke="#5fa86a" stroke-width="2" stroke-linecap="round"/>
+    <circle cx="13.5" cy="31" r="1.5" fill="#f6a8bd"/>
+    <circle cx="34.5" cy="31" r="1.5" fill="#f6a8bd"/>`,
 };
 
 const ICON_NAMES = Object.keys(ICONS);

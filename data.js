@@ -79,7 +79,7 @@ const siteData = {
         {
           "id": "toan",
           "name": "Toán",
-          "icon": "sparkles",
+          "icon": "math",
           "description": "Sách & tài liệu Toán",
           "items": [
             {
